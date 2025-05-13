@@ -20,7 +20,7 @@ export default {
       user: null,
       posts: [],
       errorMessage: '',
-      isUserLoading: true,
+      isUserLoading: false,
       arePostsLoading: false,
     }
   },
@@ -53,8 +53,6 @@ export default {
       this.user = newUser;
     },
     async fetchUserFromLocalStorage() {
-      this.isUserLoading = true;
-
       const usr = localStorage.getItem('user');
 
       if (!usr) {
@@ -62,6 +60,9 @@ export default {
       }
 
       const parsed = JSON.parse(usr);
+
+      this.isUserLoading = true;
+
 
       try {
         const user = await getUserByEmail(parsed.email);
@@ -106,7 +107,6 @@ export default {
 
 <style scoped>
 .page {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
