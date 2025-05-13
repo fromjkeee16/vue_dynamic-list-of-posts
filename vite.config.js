@@ -9,7 +9,7 @@ export default defineConfig({
   base: '/vue_dynamic-list-of-posts/',
   plugins: [
     vue(),
-    vueDevTools(),
+    // vueDevTools(),
   ],
   resolve: {
     alias: {

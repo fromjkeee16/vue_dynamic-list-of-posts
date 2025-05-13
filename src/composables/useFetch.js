@@ -1,4 +1,4 @@
-import { ref, watchEffect } from 'vue';
+import { ref } from 'vue';
 
 export function useFetch(fetchFunc, defaultValue) {
   const data = ref(defaultValue);
@@ -23,10 +23,6 @@ export function useFetch(fetchFunc, defaultValue) {
       isLoading.value = false;
     }
   };
-
-  watchEffect(() => {
-    execute();
-  });
 
   return {
     data,

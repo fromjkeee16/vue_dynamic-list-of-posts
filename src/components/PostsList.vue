@@ -1,29 +1,61 @@
-<script>
+<script setup>
+import { defineProps, onMounted, ref } from 'vue';
+import Loader from './loader/index.vue';
+import ErrorMessage from './ErrorMessage.vue';
+import { useFetch } from '@/composables/useFetch';
+import { deletePost, getPosts } from '@/helpers/posts';
+import Sidebar from './sidebar/index.vue';
+import AddPost from './AddPost.vue';
 import PostPreview from './PostPreview.vue';
-import PostLoader from './PostLoader.vue';
 
-export default {
-  props: {
-    posts: {
-      type: Array,
-      required: true,
-    },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-    selectedPost: {
-      required: true,
-    },
-  },
-  components: {
-    PostPreview,
-    PostLoader,
-  },
-  emits: ['edit', 'delete', 'add', 'select'],
+
+const selectedPost = ref(null);
+const sidebarOpen = ref(false);
+
+const handleSidebar = (newVal) => {
+  sidebarOpen.value = newVal;
+  selectedPost.value = null;
+}
+
+const props = defineProps({
+  user: {
+    required: true,
+  }
+});
+
+const fetchPosts = async () => {
+  if (!props.user.id) return [];
+  return await getPosts(props.user.id);
 };
-</script>
 
+const {
+  data: posts,
+  isLoading: arePostsLoading,
+  errorMessage: postsError,
+  execute: loadPosts,
+} = useFetch(fetchPosts, []);
+
+onMounted(() => {
+  loadPosts();
+});
+
+const handlePostDelete = async (post) => {
+  const index = posts.value.indexOf(post);
+
+  if (index !== -1) {
+
+    try {
+      if (selectedPost.value === post) {
+        selectedPost.value = null;
+      }
+
+      await deletePost(post.id);
+      posts.value.splice(index, 1);
+    }
+    catch (e) { }
+  }
+}
+</script>
 
 <template>
   <div class="tile is-parent">
@@ -31,10 +63,14 @@ export default {
       <div class="block">
         <div class="block is-flex is-justify-content-space-between">
           <p class="title">Posts</p>
-          <button type="button" class="button is-link">Add New Post</button>
+          <button type="button" class="button" :class="{ 'is-link': !sidebarOpen }" @click="handleSidebar(true)">
+            Add New Post
+          </button>
         </div>
 
-        <table class="table is-fullwidth is-striped is-hoverable is-narrow" v-if="posts.length">
+        <Loader v-if="arePostsLoading" />
+
+        <table class="table is-fullwidth is-striped is-hoverable is-narrow" v-if="!arePostsLoading && posts.length">
           <thead>
             <tr class="has-background-link-light">
               <th>ID</th>
@@ -47,13 +83,27 @@ export default {
               <td>{{ post.id }}</td>
               <td>{{ post.title }}</td>
               <td class="has-text-right is-vcentered">
-                <button type="button" class="button is-link">Open</button>
+
+                <button v-if="selectedPost !== post" type="button" class="button" @click="selectedPost = post">
+                  Open
+                </button>
+                <button v-else type="button" class="button is-link" @click="selectedPost = null">
+                  Close
+                </button>
               </td>
             </tr>
           </tbody>
         </table>
-        <p class="help is-info" v-else>No posts yet</p>
+
+        <p class="help is-info" v-else-if="!arePostsLoading && posts.length === 0">No posts yet</p>
+
+        <ErrorMessage v-if="postsError">{{ postsError }}</ErrorMessage>
       </div>
     </div>
   </div>
+
+  <Sidebar :isOpen="sidebarOpen || selectedPost">
+    <PostPreview v-if="selectedPost" :post="selectedPost" @delete="handlePostDelete" />
+    <AddPost v-else @cancel="handleSidebar(false)" @onAdd="posts.push($event)" />
+  </Sidebar>
 </template>
