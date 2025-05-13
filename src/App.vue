@@ -1,107 +1,83 @@
-<script>
-import Header from './components/header.vue';
-import Login from './components/login.vue';
-import PostsList from './components/postsList.vue';
+<script setup>
+import { ref, watch, computed, onMounted } from 'vue';
+import Header from './components/Header.vue';
+import Login from './components/Login.vue';
+import PostsList from './components/PostsList.vue';
 import Loader from './components/loader/index.vue';
-import PostLoader from './components/postLoader.vue';
 import { getUserByEmail } from './helpers/users';
 import { getPosts } from './helpers/posts';
+import { useFetch } from './composables/useFetch';
+import ErrorMessage from './components/ErrorMessage.vue';
 
-export default {
-  components: {
-    Header,
-    Login,
-    PostsList,
-    PostLoader,
-    Loader
-  },
-  data() {
-    return {
-      user: null,
-      posts: [],
-      errorMessage: '',
-      isUserLoading: false,
-      arePostsLoading: false,
-    }
-  },
-  watch: {
-    user: {
-      async handler() {
-        localStorage.setItem('user', JSON.stringify(this.user));
+const user = ref(null);
+const errorMessage = ref('');
+const selectedPost = ref(null);
 
-        if (this.user) {
-          try {
-            this.arePostsLoading = true;
-            this.posts = await getPosts(this.user.id);
-          } catch (e) {
-            this.errorMessage = e.message;
-          } finally {
-            this.arePostsLoading = false;
-          }
-        } else {
-          this.handleLogout();
-        }
-      }
-    }
-  },
-  methods: {
-    handleLogout() {
-      this.posts = [];
-      this.user = null;
-    },
-    userLogin(newUser) {
-      this.user = newUser;
-    },
-    async fetchUserFromLocalStorage() {
-      const usr = localStorage.getItem('user');
+const userLogin = (newUser) => {
+  user.value = newUser;
+};
 
-      if (!usr) {
-        return;
-      }
+const handleLogout = () => {
+  user.value = null;
+  localStorage.removeItem('user');
+};
 
-      const parsed = JSON.parse(usr);
+const fetchUserFromLocalStorage = async () => {
+  const stored = localStorage.getItem('user');
+  if (!stored) return;
 
-      this.isUserLoading = true;
+  const parsed = JSON.parse(stored);
 
-
-      try {
-        const user = await getUserByEmail(parsed.email);
-        if (!user) {
-          localStorage.removeItem('user');
-
-          return;
-        }
-
-        this.userLogin(user);
-      } catch (e) {
-        this.errorMessage = e.message;
-      } finally {
-        this.isUserLoading = false;
-      }
-    }
-  },
-  async mounted() {
-    await this.fetchUserFromLocalStorage();
+  const result = await getUserByEmail(parsed.email);
+  if (result) {
+    userLogin(result);
+  } else {
+    localStorage.removeItem('user');
   }
-}
+};
+
+onMounted(fetchUserFromLocalStorage);
+
+const fetchPosts = async () => {
+  if (!user.value) return [];
+  return await getPosts(user.value.id);
+};
+
+const {
+  data: posts,
+  isLoading: arePostsLoading,
+  errorMessage: postsError,
+  execute: loadPosts,
+} = useFetch(fetchPosts, []);
+
+watch(user, async (val) => {
+  if (val) {
+    localStorage.setItem('user', JSON.stringify(val));
+    await loadPosts();
+  } else {
+    handleLogout();
+  }
+});
 </script>
 
 <template>
   <div class="page">
-    <div class="page__loader" v-if="isUserLoading">
+    <div class="page__loader" v-if="!user && !errorMessage && !posts.length">
       <Loader />
     </div>
+
     <template v-else>
       <Login v-if="!user" @addUser="userLogin" />
-
 
       <template v-else>
         <Header :user="user" @logout="handleLogout" />
 
         <Loader v-if="arePostsLoading" />
-        <PostsList :posts="posts" v-else v-if="posts.length" />
+        <PostsList v-else :posts="posts" @select="selectedPost = $event" :selectedPost="selectedPost" />
       </template>
     </template>
+
+    <ErrorMessage v-if="postsError || errorMessage" :message="postsError || errorMessage" />
   </div>
 </template>
 
@@ -113,7 +89,6 @@ export default {
 
 .page__loader {
   flex: 1;
-
   display: flex;
   justify-content: center;
   align-items: center;

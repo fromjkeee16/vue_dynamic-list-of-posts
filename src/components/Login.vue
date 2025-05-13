@@ -1,20 +1,13 @@
 <script setup>
+import { ref } from 'vue';
 import { getUserByEmail, addUser } from '@/helpers/users';
-import { ref, watch } from 'vue';
-import NeedToRegister from './needToRegister.vue';
+import NeedToRegister from './NeedToRegister.vue';
 
 const email = ref('');
 const name = ref('');
 const errorMessage = ref('');
 const showNameInput = ref(false);
 const isSubmitting = ref(false);
-
-watch(name, (newVal) => {
-  console.log('Updated name:', newVal);
-});
-
-
-const emit = defineEmits(['addUser']);
 
 const handleSubmit = async () => {
   errorMessage.value = '';
@@ -65,6 +58,8 @@ const handleRegister = async () => {
     isSubmitting.value = false;
   }
 };
+
+const emit = defineEmits(['addUser']);
 </script>
 
 <template>
@@ -84,7 +79,7 @@ const handleRegister = async () => {
         </div>
       </div>
 
-      <NeedToRegister v-if="showNameInput" :name="name" />
+      <NeedToRegister v-if="showNameInput" v-model="name" @update:modelValue="name = $event" />
 
       <p class="help is-danger" v-if="errorMessage">{{ errorMessage }}</p>
 
