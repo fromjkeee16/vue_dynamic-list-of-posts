@@ -1,30 +1,98 @@
-<section className="container is-flex is-justify-content-center">
-  <form onSubmit="{handleSubmit}" className="box mt-5">
-    <h1 className="title is-3">You need to register"</h1>
+<script setup>
+import { getUserByEmail, addUser } from '@/helpers/users';
+import { ref, watch } from 'vue';
+import NeedToRegister from './needToRegister.vue';
 
-    <div className="field">
-      <label className="label" htmlFor="user-email"> Email </label>
+const email = ref('');
+const name = ref('');
+const errorMessage = ref('');
+const showNameInput = ref(false);
+const isSubmitting = ref(false);
 
-      <div className="control has-icons-left">
-        <input
-          type="email"
-          id="user-email"
-          name="email"
-          className="input"
-          placeholder="Enter your email"
-          required
-        />
+watch(name, (newVal) => {
+  console.log('Updated name:', newVal);
+});
 
-        <span className="icon is-small is-left">
-          <i className="fas fa-envelope" />
-        </span>
+
+const emit = defineEmits(['addUser']);
+
+const handleSubmit = async () => {
+  errorMessage.value = '';
+  if (!email.value || !email.value.includes('@')) {
+    errorMessage.value = 'Please enter a valid email address';
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    const user = await getUserByEmail(email.value);
+
+    if (user) {
+      emit('addUser', user);
+    } else {
+      showNameInput.value = true;
+    }
+
+  } catch (e) {
+    errorMessage.value = 'An error occurred during login.';
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const handleRegister = async () => {
+  errorMessage.value = '';
+  if (name.value.length < 4) {
+    errorMessage.value = 'Name must be at least 4 characters';
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    const response = await addUser({
+      name: name.value,
+      email: email.value,
+      username: null,
+      phone: null,
+    });
+
+    emit('addUser', response);
+  } catch (e) {
+    errorMessage.value = 'Registration failed.';
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+</script>
+
+<template>
+  <section class="container is-flex is-justify-content-center">
+    <form @submit.prevent="showNameInput ? handleRegister() : handleSubmit()" class="box mt-5">
+      <h1 class="title is-3">
+        {{ showNameInput ? 'You need to register' : 'Get your userID' }}
+      </h1>
+
+      <div class="field">
+        <label class="label" for="user-email">Email</label>
+        <div class="control has-icons-left">
+          <input v-model="email" type="email" id="user-email" class="input" placeholder="Enter your email" required />
+          <span class="icon is-small is-left">
+            <i class="fas fa-envelope" />
+          </span>
+        </div>
       </div>
 
-      <p className="help is-danger">error message</p>
-    </div>
+      <NeedToRegister v-if="showNameInput" :name="name" />
 
-    <div className="field">
-      <button type="submit" className="button is-primary">Login</button>
-    </div>
-  </form>
-</section>
+      <p class="help is-danger" v-if="errorMessage">{{ errorMessage }}</p>
+
+      <div class="field">
+        <button type="submit" class="button is-primary" :disabled="isSubmitting">
+          {{ showNameInput ? 'Register' : 'Login' }}
+        </button>
+      </div>
+    </form>
+  </section>
+</template>
