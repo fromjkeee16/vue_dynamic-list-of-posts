@@ -1,21 +1,18 @@
 <script setup>
-import { defineProps, onMounted, ref } from 'vue';
+import { defineProps, onMounted, ref, watch } from 'vue';
 import Loader from './loader/index.vue';
 import ErrorMessage from './ErrorMessage.vue';
 import { useFetch } from '@/composables/useFetch';
 import { deletePost, getPosts } from '@/helpers/posts';
 import Sidebar from './sidebar/index.vue';
-import AddPost from './AddPost.vue';
+import PostForm from './PostForm.vue';
 import PostPreview from './PostPreview.vue';
 
 
 const selectedPost = ref(null);
-const sidebarOpen = ref(false);
+const formOpen = ref(false);
+const isEditing = ref(false);
 
-const handleSidebar = (newVal) => {
-  sidebarOpen.value = newVal;
-  selectedPost.value = null;
-}
 
 const props = defineProps({
   user: {
@@ -55,7 +52,27 @@ const handlePostDelete = async (post) => {
     catch (e) { }
   }
 }
+
+const handleAddPost = (post) => {
+  posts.value.push(post);
+  selectedPost.value = post;
+}
+
+const handleEditPost = (post) => {
+  const index = posts.value.indexOf(selectedPost.value);
+  posts.value[index] = post;
+  isEditing.value = false;
+}
+
+watch(selectedPost, (newVal) => {
+  if (newVal !== null) {
+    formOpen.value = false;
+  }
+});
+
 </script>
+
+
 
 <template>
   <div class="tile is-parent">
@@ -63,7 +80,7 @@ const handlePostDelete = async (post) => {
       <div class="block">
         <div class="block is-flex is-justify-content-space-between">
           <p class="title">Posts</p>
-          <button type="button" class="button" :class="{ 'is-link': !sidebarOpen }" @click="handleSidebar(true)">
+          <button type="button" class="button" :class="{ 'is-link': !formOpen }" @click="formOpen = true">
             Add New Post
           </button>
         </div>
@@ -95,15 +112,18 @@ const handlePostDelete = async (post) => {
           </tbody>
         </table>
 
-        <p class="help is-info" v-else-if="!arePostsLoading && posts.length === 0">No posts yet</p>
+        <p class="notification is-warning" data-cy="NoPostsYet" v-else-if="!arePostsLoading && !posts.length">
+          No posts yet
+        </p>
 
         <ErrorMessage v-if="postsError">{{ postsError }}</ErrorMessage>
       </div>
     </div>
   </div>
 
-  <Sidebar :isOpen="sidebarOpen || selectedPost">
-    <PostPreview v-if="selectedPost" :post="selectedPost" @delete="handlePostDelete" />
-    <AddPost v-else @cancel="handleSidebar(false)" @onAdd="posts.push($event)" />
+  <Sidebar :isOpen="formOpen || selectedPost !== null">
+    <PostPreview v-if="selectedPost && !isEditing" :post="selectedPost" @onEdit="isEditing = true" @delete="handlePostDelete" />
+    <PostForm v-if="formOpen && !isEditing && !selectedPost" @cancel="formOpen = false" @onAdd="handleAddPost" />
+    <PostForm v-if="isEditing && selectedPost" @cancel="isEditing = false" @onEdit="handleEditPost" :post="selectedPost" />
   </Sidebar>
 </template>

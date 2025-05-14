@@ -48,7 +48,7 @@ const handleAddComment = async (comment) => {
 
 }
 
-const emits = defineEmits(['delete']);
+const emits = defineEmits(['delete', 'onEdit']);
 const openCommentForm = ref(false);
 </script>
 
@@ -58,7 +58,7 @@ const openCommentForm = ref(false);
     <div class="is-flex is-justify-content-space-between is-align-items-center">
       <h2>#{{ post.id }}: {{ post.title }}</h2>
       <div class="is-flex">
-        <span class="icon is-small is-right is-clickable" @click="$emit('edit', post)">
+        <span class="icon is-small is-right is-clickable" @click="$emit('onEdit', post)">
           <i class="fas fa-pen-to-square"></i>
         </span>
         <span class="icon is-small is-right has-text-danger is-clickable ml-3" @click="$emit('delete', post)">
