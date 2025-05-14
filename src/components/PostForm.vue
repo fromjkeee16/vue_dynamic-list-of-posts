@@ -12,7 +12,7 @@ const props = defineProps({
 });
 
 
-const userId = JSON.parse(localStorage.getItem('user')).id;
+const userId = JSON.parse(localStorage.getItem('user'))?.id;
 
 const title = ref('');
 const body = ref('');

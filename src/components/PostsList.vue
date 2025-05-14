@@ -60,7 +60,10 @@ const handleAddPost = (post) => {
 
 const handleEditPost = (post) => {
   const index = posts.value.indexOf(selectedPost.value);
-  posts.value[index] = post;
+  if(index !== -1) {
+    posts.value[index] = post;
+  }
+  
   isEditing.value = false;
 }
 
